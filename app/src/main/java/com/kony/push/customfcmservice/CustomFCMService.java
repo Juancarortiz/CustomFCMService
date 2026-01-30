@@ -5,9 +5,11 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.os.Build;
 import android.util.Log;
 
@@ -60,7 +62,6 @@ public class CustomFCMService extends KonyFCMService {
 
             // --- TÍTULO ---
             String title = data.get("title");
-
             if (title == null || title.isEmpty()) {
                 resId = context.getResources().getIdentifier("notify_push_msg_title_keys", "string", pkgName);
                 if (resId != 0) {
@@ -74,12 +75,10 @@ public class CustomFCMService extends KonyFCMService {
                     }
                 }
             }
-
             if (title == null || title.isEmpty()) {
                 resId = context.getResources().getIdentifier("notify_push_msg_default_title", "string", pkgName);
                 if (resId != 0) title = context.getString(resId);
             }
-
             if (title == null || title.isEmpty()) {
                 title = context.getApplicationInfo().loadLabel(context.getPackageManager()).toString();
             }
@@ -133,6 +132,54 @@ public class CustomFCMService extends KonyFCMService {
                     .setDefaults(NotificationCompat.DEFAULT_ALL)
                     .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
 
+            // --- BOTONES DE ACCIÓN ---
+
+            // 1. Botón "Navegar" (Si viene urlPage)
+            String urlPage = data.get("urlPage");
+            if (urlPage != null && !urlPage.isEmpty()) {
+                Intent webIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(urlPage));
+                PendingIntent webPendingIntent = PendingIntent.getActivity(context, notificationId + 3, webIntent,
+                        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+                notificationBuilder.addAction(android.R.drawable.ic_menu_compass, "Navegar", webPendingIntent);
+            }
+
+            // 2. Botón "Ver Video" (Si viene videoUrl)
+            String videoUrl = data.get("videoUrl");
+            if (videoUrl != null && !videoUrl.isEmpty()) {
+                Intent videoIntent = new Intent(context, MainActivity.class);
+                videoIntent.setAction("WATCH_VIDEO_ACTION");
+                videoIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                videoIntent.putExtra("videoUrl", videoUrl);
+                videoIntent.putExtra("notificationId", notificationId);
+
+                PendingIntent videoPendingIntent = PendingIntent.getActivity(context, notificationId + 4, videoIntent,
+                        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+                notificationBuilder.addAction(android.R.drawable.ic_media_play, "Ver Video", videoPendingIntent);
+            }
+
+            // 3. Botones "Aceptar" y "Denegar" (SOLO SI TIPO ES 6)
+            String tipo = data.get("TIPO");
+            if ("6".equals(tipo)) {
+                Intent acceptIntent = new Intent(context, MainActivity.class);
+                acceptIntent.setAction("ACCEPT_ACTION");
+                acceptIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                acceptIntent.putExtra("notificationId", notificationId);
+                PendingIntent acceptPendingIntent = PendingIntent.getActivity(context, notificationId + 1, acceptIntent,
+                        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+                Intent denyIntent = new Intent(context, MainActivity.class);
+                denyIntent.setAction("DENY_ACTION");
+                denyIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                denyIntent.putExtra("notificationId", notificationId);
+                PendingIntent denyPendingIntent = PendingIntent.getActivity(context, notificationId + 2, denyIntent,
+                        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+                notificationBuilder.addAction(android.R.drawable.ic_menu_view, "Aceptar", acceptPendingIntent);
+                notificationBuilder.addAction(android.R.drawable.ic_delete, "Denegar", denyPendingIntent);
+            }
+
+            // --- ESTILOS ---
             if (myBitmap != null) {
                 notificationBuilder.setLargeIcon(myBitmap)
                         .setStyle(new NotificationCompat.BigPictureStyle().bigPicture(myBitmap).bigLargeIcon(null));
@@ -140,20 +187,17 @@ public class CustomFCMService extends KonyFCMService {
                 notificationBuilder.setStyle(new NotificationCompat.BigTextStyle().bigText(desc));
             }
 
+            // --- CANAL (Android O+) ---
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 NotificationManager mNotificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-
                 NotificationChannel channel = new NotificationChannel(channelId, "Notificaciones Importantes", NotificationManager.IMPORTANCE_HIGH);
-                channel.enableLights(true);
-                channel.enableVibration(true);
-                channel.setLockscreenVisibility(NotificationCompat.VISIBILITY_PUBLIC);
-
                 if (mNotificationManager != null) {
                     mNotificationManager.createNotificationChannel(channel);
                 }
                 notificationBuilder.setChannelId(channelId);
             }
 
+            // --- MOSTRAR ---
             NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
