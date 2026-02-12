@@ -13,6 +13,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
@@ -35,7 +36,17 @@ public class CustomFCMService extends KonyFCMService {
         Log.d("FCMService", "#### on Message Received method");
     }
 
+    /**
+     * Se llama cuando el token de Firebase cambia o se genera por primera vez.
+     */
     @Override
+    public void onNewToken(@NonNull String token) {
+        super.onNewToken(token);
+        Log.d("FCMService", "#### Nuevo Token generado: " + token);
+    }
+
+    @Override
+    @SuppressWarnings("DiscouragedApi")
     public void showPushMessageNotification(Context context, Map<String, String> data) {
         Log.d("FCMService", "#### Payload recibido: " + data.toString());
         String pkgName = context.getPackageName();
@@ -132,15 +143,13 @@ public class CustomFCMService extends KonyFCMService {
                     .setDefaults(NotificationCompat.DEFAULT_ALL)
                     .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
 
-            // --- BOTONES DE ACCIÓN ---
-
             // 1. Botón "Navegar" (Si viene urlPage)
             String urlPage = data.get("urlPage");
             if (urlPage != null && !urlPage.isEmpty()) {
                 Intent webIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(urlPage));
                 PendingIntent webPendingIntent = PendingIntent.getActivity(context, notificationId + 3, webIntent,
                         PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-                notificationBuilder.addAction(android.R.drawable.ic_menu_compass, "Navegar", webPendingIntent);
+                notificationBuilder.addAction(0, "Navegar", webPendingIntent);
             }
 
             // 2. Botón "Ver Video" (Si viene videoUrl)
@@ -155,28 +164,7 @@ public class CustomFCMService extends KonyFCMService {
                 PendingIntent videoPendingIntent = PendingIntent.getActivity(context, notificationId + 4, videoIntent,
                         PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
-                notificationBuilder.addAction(android.R.drawable.ic_media_play, "Ver Video", videoPendingIntent);
-            }
-
-            // 3. Botones "Aceptar" y "Denegar" (SOLO SI TIPO ES 6)
-            String tipo = data.get("TIPO");
-            if ("6".equals(tipo)) {
-                Intent acceptIntent = new Intent(context, MainActivity.class);
-                acceptIntent.setAction("ACCEPT_ACTION");
-                acceptIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                acceptIntent.putExtra("notificationId", notificationId);
-                PendingIntent acceptPendingIntent = PendingIntent.getActivity(context, notificationId + 1, acceptIntent,
-                        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-
-                Intent denyIntent = new Intent(context, MainActivity.class);
-                denyIntent.setAction("DENY_ACTION");
-                denyIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                denyIntent.putExtra("notificationId", notificationId);
-                PendingIntent denyPendingIntent = PendingIntent.getActivity(context, notificationId + 2, denyIntent,
-                        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-
-                notificationBuilder.addAction(android.R.drawable.ic_menu_view, "Aceptar", acceptPendingIntent);
-                notificationBuilder.addAction(android.R.drawable.ic_delete, "Denegar", denyPendingIntent);
+                notificationBuilder.addAction(0, "Ver Video", videoPendingIntent);
             }
 
             // --- ESTILOS ---
