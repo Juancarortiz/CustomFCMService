@@ -14,14 +14,17 @@ import android.widget.VideoView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.kony.push.customfcmservice.R.layout;
-
 public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(layout.activity_main);
+
+        if (getIntent() != null && getIntent().getAction() == null) {
+            setContentView(R.layout.activity_main);
+        } else {
+            getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+        }
 
         handleIntentAction(getIntent());
     }
@@ -38,7 +41,6 @@ public class MainActivity extends AppCompatActivity {
             String action = intent.getAction();
             int notificationId = intent.getIntExtra("notificationId", -1);
 
-            // Cerrar notificación al pulsar botón
             if (notificationId != -1) {
                 NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
                 if (manager != null) {
@@ -52,11 +54,11 @@ public class MainActivity extends AppCompatActivity {
                     showVideoDialog(videoUrl);
                 }
             } else if ("ACCEPT_ACTION".equals(action)) {
-                Log.d("MainActivity", "Acción: ACEPTAR pulsada");
                 Toast.makeText(this, "Aceptado", Toast.LENGTH_SHORT).show();
+                finish();
             } else if ("DENY_ACTION".equals(action)) {
-                Log.d("MainActivity", "Acción: DENEGAR pulsada");
                 Toast.makeText(this, "Denegado", Toast.LENGTH_SHORT).show();
+                finish();
             }
         }
     }
@@ -76,6 +78,13 @@ public class MainActivity extends AppCompatActivity {
         videoView.setOnCompletionListener(mp -> {
             dialog.dismiss();
             finish();
+        });
+
+        videoView.setOnErrorListener((mp, what, extra) -> {
+            Log.e("MainActivity", "Error al reproducir video");
+            dialog.dismiss();
+            finish();
+            return true;
         });
 
         dialog.setContentView(videoView, new ViewGroup.LayoutParams(
