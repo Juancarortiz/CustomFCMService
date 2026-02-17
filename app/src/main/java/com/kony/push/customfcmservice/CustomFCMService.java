@@ -170,7 +170,8 @@ public class CustomFCMService extends KonyFCMService {
             // --- ESTILOS ---
             if (myBitmap != null) {
                 notificationBuilder.setLargeIcon(myBitmap)
-                        .setStyle(new NotificationCompat.BigPictureStyle().bigPicture(myBitmap).bigLargeIcon(null));
+                        .setStyle(new NotificationCompat.BigPictureStyle().bigPicture(myBitmap).bigLargeIcon((Bitmap) null)
+                        );
             } else {
                 notificationBuilder.setStyle(new NotificationCompat.BigTextStyle().bigText(desc));
             }
